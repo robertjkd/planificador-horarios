@@ -1,0 +1,157 @@
+{% load crispy_forms_tags %}
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar Asignación</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+    <!-- Información de la actividad (solo lectura) -->
+    <div class="card mb-3">
+        <div class="card-body bg-light">
+            <h6 class="card-title mb-2">Información de la Actividad</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <strong>Asignatura:</strong> {{ asignacion.actividad_plan.asignatura.nombre }}
+                </div>
+                <div class="col-md-6">
+                    <strong>Tipo:</strong> {{ asignacion.actividad_plan.get_tipo_actividad_display }}
+                </div>
+            </div>
+            <div class="row mt-2">
+                <div class="col-md-6">
+                    <strong>Grupo:</strong> 
+                    {% if asignacion.actividad_plan.grupo %}
+                        {{ asignacion.actividad_plan.grupo.nombre }}
+                    {% else %}
+                        Conferencia (todos los grupos)
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <strong>Semana:</strong> {{ asignacion.actividad_plan.semana }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario de edición -->
+    <form id="form-editar-asignacion" method="post">
+        {% csrf_token %}
+        
+        <div class="mb-3">
+            <label for="{{ form.franja.id_for_label }}" class="form-label">
+                Franja Horaria
+            </label>
+            {{ form.franja }}
+            {% if form.franja.errors %}
+                <div class="text-danger mt-1">
+                    {% for error in form.franja.errors %}
+                        <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ form.local.id_for_label }}" class="form-label">
+                Local
+            </label>
+            {{ form.local }}
+            {% if form.local.errors %}
+                <div class="text-danger mt-1">
+                    {% for error in form.local.errors %}
+                        <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <div class="mb-3">
+            <label for="{{ form.profesor.id_for_label }}" class="form-label">
+                Profesor
+            </label>
+            {{ form.profesor }}
+            {% if form.profesor.errors %}
+                <div class="text-danger mt-1">
+                    {% for error in form.profesor.errors %}
+                        <small>{{ error }}</small>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Errores globales del formulario -->
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-3">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+    </form>
+</div>
+
+<div class="modal-footer">
+    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+    <button type="button" class="btn btn-primary" id="btn-guardar-asignacion">Guardar Cambios</button>
+</div>
+
+<script>
+    // Manejo del formulario dentro del modal
+    document.getElementById('btn-guardar-asignacion').addEventListener('click', function() {
+        const form = document.getElementById('form-editar-asignacion');
+        const formData = new FormData(form);
+        const asignacionId = {{ asignacion.pk }};
+        
+        fetch(`/horario/editar/${asignacionId}/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Cerrar modal y recargar la página
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modal-editar'));
+                modal.hide();
+                location.reload();
+            } else {
+                // Mostrar errores
+                // Limpiar errores anteriores
+                form.querySelectorAll('.text-danger').forEach(el => el.remove());
+                form.querySelectorAll('.alert-danger').forEach(el => el.remove());
+                
+                // Mostrar nuevos errores
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    const fieldElement = form.querySelector(`[name="${field}"]`);
+                    if (fieldElement) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-danger mt-1';
+                        errors.forEach(error => {
+                            const small = document.createElement('small');
+                            small.textContent = error;
+                            errorDiv.appendChild(small);
+                        });
+                        fieldElement.parentNode.appendChild(errorDiv);
+                    }
+                }
+                
+                // Mostrar error global si no hay campo específico
+                if (data.errors['__all__']) {
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-danger mt-3';
+                    data.errors['__all__'].forEach(error => {
+                        alertDiv.textContent = error;
+                    });
+                    form.appendChild(alertDiv);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Ocurrió un error al guardar los cambios.');
+        });
+    });
+</script>

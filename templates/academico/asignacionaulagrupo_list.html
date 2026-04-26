@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Asignaciones Aula-Grupo{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Asignación de Aulas a Grupos</h2>
+    <a href="{% url 'academico:asignacionaulagrupo_create' %}" class="btn btn-primary">Nueva Asignación</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Grupo</th>
+                        <th>Año</th>
+                        <th>Aula Asignada</th>
+                        <th>Capacidad</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asignacion in asignaciones %}
+                    <tr>
+                        <td>{{ asignacion.grupo.nombre }}</td>
+                        <td>{{ asignacion.grupo.anio }}</td>
+                        <td>{{ asignacion.local.codigo }} - {{ asignacion.local.nombre }}</td>
+                        <td>{{ asignacion.local.capacidad }} alumnos</td>
+                        <td class="text-end">
+                            <a href="{% url 'academico:asignacionaulagrupo_update' asignacion.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a href="{% url 'academico:asignacionaulagrupo_delete' asignacion.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            No hay asignaciones de aulas registradas
+                            <br>
+                            <a href="{% url 'academico:asignacionaulagrupo_create' %}" class="btn btn-sm btn-primary mt-2">Asignar aula a grupo</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h6>Información:</h6>
+    <p class="mb-0">
+        Cada grupo puede tener un <strong>aula base</strong> asignada donde recibe sus clases regulares.
+        Solo se pueden asignar locales de tipo <strong>AULA</strong>.
+    </p>
+</div>
+{% endblock %}

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Importar Balance de Carga{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h3 class="mb-4">Importar Balance de Carga</h3>
+
+        {# VISTA PREVIA - PASO DE CONFIRMACIÓN #}
+        {% if mostrar_vista_previa %}
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-dark">
+                <i class="bi bi-eye"></i> Vista Previa - Revise antes de confirmar
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ vista_previa.anio }}</h5>
+                <p class="text-muted">Archivo: <strong>{{ vista_previa.nombre_archivo }}</strong></p>
+                
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Asignaturas a procesar
+                        <span class="badge bg-primary rounded-pill">{{ vista_previa.asignaturas_procesadas }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Actividades a crear
+                        <span class="badge bg-success rounded-pill">{{ vista_previa.actividades_creadas }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Actividades omitidas (duplicadas)
+                        <span class="badge bg-secondary rounded-pill">{{ vista_previa.actividades_omitidas }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Filas vacías
+                        <span class="badge bg-light text-dark rounded-pill">{{ vista_previa.filas_vacias }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Errores detectados
+                        <span class="badge bg-danger rounded-pill">{{ vista_previa.errores|length }}</span>
+                    </li>
+                </ul>
+
+                {% if vista_previa.detalle_por_tipo %}
+                <h6>Desglose por tipo de actividad</h6>
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr><th>Tipo</th><th>Cantidad</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for tipo, cantidad in vista_previa.detalle_por_tipo.items %}
+                        <tr>
+                            <td>{{ tipo }}</td>
+                            <td>{{ cantidad }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+
+                {% if vista_previa.errores %}
+                <div class="mt-3">
+                    <h6 class="text-danger">Errores encontrados en el archivo</h6>
+                    <div class="overflow-auto" style="max-height: 200px;">
+                        <ul class="list-group list-group-flush small">
+                            {% for error in vista_previa.errores %}
+                            <li class="list-group-item list-group-item-warning">{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if vista_previa.advertencias %}
+                <div class="alert alert-warning mt-3">
+                    <h6>Advertencias:</h6>
+                    <ul class="mb-0">
+                        {% for adv in vista_previa.advertencias %}
+                        <li>{{ adv }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div class="d-flex justify-content-between mt-4">
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="cancelar">
+                        <button type="submit" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Cancelar
+                        </button>
+                    </form>
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="accion" value="confirmar">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> Confirmar y Guardar
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# RESUMEN FINAL - DESPUÉS DE IMPORTAR #}
+        {% if mostrar_resumen %}
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success text-white">
+                <i class="bi bi-check-circle-fill"></i> Importación Completada Exitosamente
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ resumen.anio }}</h5>
+                <ul class="list-group list-group-flush mb-3">
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Asignaturas procesadas
+                        <span class="badge bg-primary rounded-pill">{{ resumen.asignaturas_procesadas }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Actividades creadas
+                        <span class="badge bg-success rounded-pill">{{ resumen.actividades_creadas }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Actividades omitidas (duplicadas)
+                        <span class="badge bg-secondary rounded-pill">{{ resumen.actividades_omitidas }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Filas vacías
+                        <span class="badge bg-light text-dark rounded-pill">{{ resumen.filas_vacias }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        Errores
+                        <span class="badge bg-danger rounded-pill">{{ resumen.errores|length }}</span>
+                    </li>
+                </ul>
+
+                {% if resumen.detalle_por_tipo %}
+                <h6>Desglose por tipo de actividad</h6>
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr><th>Tipo</th><th>Cantidad</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for tipo, cantidad in resumen.detalle_por_tipo.items %}
+                        <tr>
+                            <td>{{ tipo }}</td>
+                            <td>{{ cantidad }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+
+                {% if resumen.errores %}
+                <div class="mt-3">
+                    <h6 class="text-danger">Errores durante la importación</h6>
+                    <div class="overflow-auto" style="max-height: 200px;">
+                        <ul class="list-group list-group-flush small">
+                            {% for error in resumen.errores %}
+                            <li class="list-group-item list-group-item-warning">{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+
+                <a href="{% url 'planificacion:importar_balance' %}" class="btn btn-primary mt-3">
+                    <i class="bi bi-upload"></i> Importar otro archivo
+                </a>
+            </div>
+        </div>
+        {% endif %}
+
+        {# FORMULARIO DE IMPORTACIÓN - SOLO MOSTRAR SI NO HAY VISTA PREVIA #}
+        {% if not mostrar_vista_previa %}
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-upload"></i> Formulario de importación
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {% for field in form %}
+                    <div class="mb-3">
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    {% endfor %}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-eye"></i> Vista Previa
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">Formatos soportados</div>
+            <div class="card-body small">
+                <p><strong>CSV:</strong> columnas <code>asignatura, semana, dia, actividad</code></p>
+                <pre class="bg-light p-2">asignatura,semana,dia,actividad
+Álgebra,1,1,C
+Álgebra,1,2,CP</pre>
+                <p class="mt-3"><strong>Excel matriz:</strong> primera columna "Asignatura", demás columnas <code>S1D1, S1D2, …</code></p>
+                <pre class="bg-light p-2">Asignatura | S1D1 | S1D2 | S1D3 | S1D4
+Álgebra    | C    | CP   | CP   |</pre>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Asignaciones Profesor-Asignatura{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Asignaciones de Profesores</h2>
+    <a href="{% url 'academico:asignacionprofesor_create' %}" class="btn btn-primary">Nueva Asignación</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Profesor</th>
+                        <th>Asignatura</th>
+                        <th>Año</th>
+                        <th>Tipo</th>
+                        <th>Grupo</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asignacion in asignaciones %}
+                    <tr>
+                        <td>{{ asignacion.profesor.nombre }}</td>
+                        <td>{{ asignacion.asignatura.abreviatura }} - {{ asignacion.asignatura.nombre }}</td>
+                        <td>{{ asignacion.asignatura.anio }}</td>
+                        <td>
+                            <span class="badge bg-info">{{ asignacion.get_tipo_actividad_display }}</span>
+                        </td>
+                        <td>
+                            {% if asignacion.grupo %}
+                                {{ asignacion.grupo.nombre }}
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Conferencia</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <a href="{% url 'academico:asignacionprofesor_update' asignacion.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a href="{% url 'academico:asignacionprofesor_delete' asignacion.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">
+                            No hay asignaciones registradas
+                            <br>
+                            <a href="{% url 'academico:asignacionprofesor_create' %}" class="btn btn-sm btn-primary mt-2">Crear asignación</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <h6>Información:</h6>
+    <ul class="mb-0">
+        <li><strong>Conferencia:</strong> Cuando el campo "Grupo" está vacío, indica que el profesor imparte la asignatura como conferencia (a todo el año).</li>
+        <li><strong>Grupo específico:</strong> Seleccionar un grupo indica que el profesor imparte la asignatura solo a ese grupo.</li>
+    </ul>
+</div>
+{% endblock %}

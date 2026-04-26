@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+
+{% block title %}Horario - Calendario Interactivo{% endblock %}
+
+{% block extra_css %}
+<!-- FullCalendar CSS -->
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+    .calendar-container {
+        margin: 20px 0;
+    }
+    
+    .filtros-panel {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .filtro-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: end;
+    }
+    
+    .filtro-group {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .filtro-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .filtro-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+    
+    .btn-filtrar {
+        background-color: #0d6efd;
+        color: white;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .btn-filtrar:hover {
+        background-color: #0b5ed7;
+    }
+    
+    #calendar {
+        background-color: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* Colores por tipo de actividad para FullCalendar */
+    .fc-event.tipo-C {
+        background-color: #e3f2bd;
+        border-color: #90caf9;
+    }
+    
+    .fc-event.tipo-CE {
+        background-color: #bbdefb;
+        border-color: #64b5f6;
+    }
+    
+    .fc-event.tipo-CP {
+        background-color: #c8e6c9;
+        border-color: #81c784;
+    }
+    
+    .fc-event.tipo-L {
+        background-color: #c5e1a5;
+        border-color: #aed581;
+    }
+    
+    .fc-event.tipo-S {
+        background-color: #fff9c4;
+        border-color: #fff59d;
+    }
+    
+    .fc-event.tipo-T {
+        background-color: #ffe0b2;
+        border-color: #ffb74d;
+    }
+    
+    .fc-event.tipo-TE {
+        background-color: #ffcc80;
+        border-color: #ffa726;
+    }
+    
+    .fc-event.tipo-PP {
+        background-color: #f5f5f5;
+        border-color: #e0e0e0;
+    }
+    
+    .fc-event.tipo-E {
+        background-color: #f8bbd0;
+        border-color: #f48fb1;
+    }
+    
+    .fc-event.tipo-NP {
+        background-color: #e0e0e0;
+        border-color: #bdbdbd;
+    }
+    
+    /* Toast container */
+    .toast-container {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 9999;
+    }
+    
+    /* Modal de edición */
+    .modal-header {
+        background-color: #f8f9fa;
+    }
+    
+    .badge-tipo {
+        font-size: 0.8em;
+        padding: 2px 6px;
+        border-radius: 4px;
+        background-color: #6c757d;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container calendar-container">
+    <!-- Panel de filtros -->
+    <div class="filtros-panel">
+        <form id="filtro-form" class="filtro-row">
+            <div class="filtro-group">
+                <label for="anio_id">Año Académico</label>
+                <select id="anio_id" name="anio_id">
+                    <option value="">Seleccione año</option>
+                    {% for anno in annos %}
+                    <option value="{{ anno.pk }}" {% if anno.pk == anio_id|int %}selected{% endif %}>
+                        {{ anno.nombre }} ({{ anno.get_turno_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filtro-group">
+                <label for="semana">Semana</label>
+                <select id="semana" name="semana">
+                    {% for s in semanas %}
+                    <option value="{{ s }}" {% if s == semana|int %}selected{% endif %}>
+                        Semana {{ s }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filtro-group">
+                <label for="grupo_id">Grupo (opcional)</label>
+                <select id="grupo_id" name="grupo_id">
+                    <option value="">Todos los grupos</option>
+                    {% for grupo in grupos %}
+                    <option value="{{ grupo.pk }}" {% if grupo.pk == grupo_id|int %}selected{% endif %}>
+                        {{ grupo.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            {% if puede_editar %}
+            <div class="filtro-group">
+                <label for="profesor_id">Profesor (opcional)</label>
+                <select id="profesor_id" name="profesor_id">
+                    <option value="">Todos los profesores</option>
+                    {% for profesor in profesores %}
+                    <option value="{{ profesor.pk }}" {% if profesor.pk == profesor_id|int %}selected{% endif %}>
+                        {{ profesor.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            
+            <button type="submit" class="btn-filtrar">Filtrar</button>
+        </form>
+    </div>
+    
+    <!-- Calendario -->
+    <div id="calendar"></div>
+</div>
+
+<!-- Modal de edición de asignación -->
+<div class="modal fade" id="modal-editar-asignacion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Asignación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Información de la actividad (solo lectura) -->
+                <div class="card mb-3">
+                    <div class="card-body bg-light">
+                        <h6 class="card-title mb-2">Información de la Actividad</h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Asignatura:</strong> <span id="info-asignatura"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Tipo:</strong> <span id="info-tipo"></span> <span id="info-tipo-badge" class="badge-tipo"></span>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-md-6">
+                                <strong>Grupo:</strong> <span id="info-grupo"></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong>Semana:</strong> <span id="info-semana"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulario de edición -->
+                <form id="form-editar-asignacion">
+                    <input type="hidden" id="edit-asignacion-id">
+                    
+                    <div class="mb-3">
+                        <label for="edit-franja" class="form-label">Franja Horaria</label>
+                        <select id="edit-franja" class="form-select" name="franja_id">
+                            <option value="">Seleccione franja</option>
+                        </select>
+                        <div id="error-franja" class="text-danger mt-1" style="display: none;"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-local" class="form-label">Local</label>
+                        <select id="edit-local" class="form-select" name="local_id">
+                            <option value="">Seleccione local</option>
+                        </select>
+                        <div id="error-local" class="text-danger mt-1" style="display: none;"></div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="edit-profesor" class="form-label">Profesor</label>
+                        <select id="edit-profesor" class="form-select" name="profesor_id">
+                            <option value="">Sin asignar</option>
+                        </select>
+                        <div id="error-profesor" class="text-danger mt-1" style="display: none;"></div>
+                    </div>
+                    
+                    <div id="error-global" class="alert alert-danger mt-3" style="display: none;"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btn-guardar-asignacion">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- FullCalendar JS -->
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js"></script>
+
+<script>
+// Variables globales
+let calendar;
+let puedeEditar = {{ 'true' if puede_editar else 'false' }};
+let franjasCache = [];
+let asignacionActual = null;
+
+// Inicializar calendario al cargar
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarCalendario();
+    cargarFiltrosIniciales();
+});
+
+function inicializarCalendario() {
+    const calendarEl = document.getElementById('calendar');
+    
+    calendar = new FullCalendar.Calendar(calendarEl, {
+        initialView: 'timeGridWeek',
+        headerToolbar: {
+            left: 'prev,next today',
+            center: 'title',
+            right: 'dayGridMonth,timeGridWeek,timeGridDay'
+        },
+        hiddenDays: [0, 6], // Ocultar sábado y domingo
+        slotMinTime: '07:00:00',
+        slotMaxTime: '22:00:00',
+        slotDuration: '01:30:00',
+        allDaySlot: false,
+        editable: puedeEditar,
+        selectable: false,
+        eventClick: manejarClickEvento,
+        eventDrop: manejarDropEvento,
+        locale: 'es',
+        events: function(info, successCallback, failureCallback) {
+            cargarEventos(info.start, info.end)
+                .then(eventos => successCallback(eventos))
+                .catch(error => failureCallback(error));
+        },
+        eventDidMount: function(info) {
+            // Añadir clase CSS según tipo de actividad
+            const tipo = info.event.extendedProps.tipo_actividad;
+            if (tipo) {
+                info.el.classList.add('tipo-' + tipo);
+            }
+        }
+    });
+    
+    calendar.render();
+}
+
+function cargarEventos(start, end) {
+    const anioId = document.getElementById('anio_id').value;
+    const semana = document.getElementById('semana').value;
+    const grupoId = document.getElementById('grupo_id').value;
+    const profesorId = document.getElementById('profesor_id') ? document.getElementById('profesor_id').value : null;
+    
+    if (!anioId || !semana) {
+        return Promise.resolve([]);
+    }
+    
+    const url = `/horario/api/horario/?anio_id=${anioId}&semana=${semana}`;
+    const params = new URLSearchParams();
+    
+    if (grupoId) params.append('grupo_id', grupoId);
+    if (profesorId) params.append('profesor_id', profesorId);
+    
+    return fetch(url + '&' + params.toString())
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            return data;
+        })
+        .catch(error => {
+            mostrarToast('Error al cargar eventos: ' + error.message, 'error');
+            throw error;
+        });
+}
+
+function manejarClickEvento(info) {
+    if (!puedeEditar) {
+        // Solo lectura: mostrar información en tooltip o alert
+        const props = info.event.extendedProps;
+        alert(`${props.asignatura_nombre}\nTipo: ${props.tipo_actividad}\nGrupo: ${props.grupo_nombre || 'Todos'}\nProfesor: ${props.profesor_nombre}\nLocal: ${props.local_codigo}`);
+        return;
+    }
+    
+    // Abrir modal de edición
+    asignacionActual = info.event;
+    abrirModalEdicion(info.event);
+}
+
+function manejarDropEvento(info) {
+    if (!puedeEditar) {
+        info.revert();
+        return;
+    }
+    
+    const evento = info.event;
+    const asignacionId = evento.extendedProps.asignacion_id;
+    const nuevaFecha = evento.start;
+    
+    // Buscar franja correspondiente a la nueva fecha/hora
+    const diaSemana = nuevaFecha.getDay(); // 0=Domingo, 1=Lunes, etc.
+    const diaAjustado = diaSemana === 0 ? 6 : diaSemana - 1; // Ajustar a 0=Lunes
+    
+    const horaInicio = nuevaFecha.getHours().toString().padStart(2, '0') + ':' + 
+                      nuevaFecha.getMinutes().toString().padStart(2, '0');
+    
+    // Buscar franja en caché
+    const nuevaFranja = franjasCache.find(f => 
+        f.dia_semana === diaAjustado && f.hora_inicio === horaInicio
+    );
+    
+    if (!nuevaFranja) {
+        mostrarToast('No se encontró una franja horaria para la nueva posición', 'error');
+        info.revert();
+        return;
+    }
+    
+    // Confirmar cambio
+    if (confirm(`¿Mover asignación a la franja ${nuevaFranja.hora_inicio}-${nuevaFranja.hora_fin}?`)) {
+        modificarAsignacion(asignacionId, { franja_id: nuevaFranja.id })
+            .then(response => {
+                if (response.success) {
+                    mostrarToast('Asignación actualizada correctamente', 'success');
+                } else {
+                    mostrarToast('Error: ' + Object.values(response.errors).join(', '), 'error');
+                    info.revert();
+                }
+            })
+            .catch(error => {
+                mostrarToast('Error al modificar asignación', 'error');
+                info.revert();
+            });
+    } else {
+        info.revert();
+    }
+}
+
+function abrirModalEdicion(evento) {
+    const props = evento.extendedProps;
+    
+    // Llenar información de la actividad
+    document.getElementById('info-asignatura').textContent = props.asignatura_nombre;
+    document.getElementById('info-tipo').textContent = props.tipo_actividad;
+    document.getElementById('info-tipo-badge').textContent = props.tipo_actividad;
+    document.getElementById('info-grupo').textContent = props.grupo_nombre || 'Todos los grupos';
+    document.getElementById('info-semana').textContent = props.semana;
+    
+    // Guardar ID de asignación
+    document.getElementById('edit-asignacion-id').value = props.asignacion_id;
+    
+    // Cargar opciones de franja
+    cargarFranjasSelect(props.franja_id);
+    
+    // Cargar opciones de local
+    cargarLocalesSelect(props.tipo_actividad, props.local_id);
+    
+    // Cargar opciones de profesor
+    cargarProfesoresSelect(props.asignatura_abreviatura, props.grupo_id, props.profesor_id);
+    
+    // Limpiar errores
+    limpiarErrores();
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modal-editar-asignacion'));
+    modal.show();
+}
+
+function cargarFranjasSelect(franjaIdSeleccionada) {
+    const anioId = document.getElementById('anio_id').value;
+    
+    fetch(`/horario/api/franjas/?anio_id=${anioId}`)
+        .then(response => response.json())
+        .then(data => {
+            franjasCache = data;
+            const select = document.getElementById('edit-franja');
+            select.innerHTML = '<option value="">Seleccione franja</option>';
+            
+            data.forEach(franja => {
+                const option = document.createElement('option');
+                option.value = franja.id;
+                option.textContent = `${franja.hora_inicio}-${franja.hora_fin} (Día ${franja.dia_semana})`;
+                if (franja.id === franjaIdSeleccionada) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            mostrarToast('Error al cargar franjas', 'error');
+        });
+}
+
+function cargarLocalesSelect(tipoActividad, localIdSeleccionado) {
+    const params = new URLSearchParams();
+    if (tipoActividad) params.append('tipo_actividad', tipoActividad);
+    
+    fetch(`/horario/api/locales/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('edit-local');
+            select.innerHTML = '<option value="">Seleccione local</option>';
+            
+            data.forEach(local => {
+                const option = document.createElement('option');
+                option.value = local.id;
+                option.textContent = `${local.codigo} - ${local.nombre} (Cap: ${local.capacidad})`;
+                if (local.id === localIdSeleccionado) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            mostrarToast('Error al cargar locales', 'error');
+        });
+}
+
+function cargarProfesoresSelect(asignaturaAbrev, grupoId, profesorIdSeleccionado) {
+    // Necesitamos el ID de asignatura, pero solo tenemos la abreviatura
+    // Para simplificar, cargamos todos los profesores y filtramos en el frontend
+    // En producción, debería haber un endpoint que acepte abreviatura o nombre
+    
+    const params = new URLSearchParams();
+    if (grupoId) params.append('grupo_id', grupoId);
+    
+    fetch(`/horario/api/profesores/?${params.toString()}`)
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('edit-profesor');
+            select.innerHTML = '<option value="">Sin asignar</option>';
+            
+            data.forEach(profesor => {
+                const option = document.createElement('option');
+                option.value = profesor.id;
+                option.textContent = `${profesor.nombre} ${profesor.apellido}`;
+                if (profesor.id === profesorIdSeleccionado) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            mostrarToast('Error al cargar profesores', 'error');
+        });
+}
+
+function modificarAsignacion(asignacionId, datos) {
+    return fetch(`/horario/api/asignacion/${asignacionId}/modificar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(datos)
+    })
+    .then(response => response.json());
+}
+
+function limpiarErrores() {
+    document.getElementById('error-franja').style.display = 'none';
+    document.getElementById('error-local').style.display = 'none';
+    document.getElementById('error-profesor').style.display = 'none';
+    document.getElementById('error-global').style.display = 'none';
+}
+
+function mostrarToast(mensaje, tipo = 'info') {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    
+    const bgClass = tipo === 'success' ? 'bg-success' : 
+                   tipo === 'error' ? 'bg-danger' : 'bg-info';
+    
+    toast.className = `toast align-items-center text-white ${bgClass}`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                ${mensaje}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    container.appendChild(toast);
+    
+    const bsToast = new bootstrap.Toast(toast, { delay: 5000 });
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+function cargarFiltrosIniciales() {
+    // Actualizar URL con filtros actuales
+    actualizarURL();
+}
+
+function actualizarURL() {
+    const anioId = document.getElementById('anio_id').value;
+    const semana = document.getElementById('semana').value;
+    const grupoId = document.getElementById('grupo_id').value;
+    const profesorId = document.getElementById('profesor_id') ? document.getElementById('profesor_id').value : null;
+    
+    const params = new URLSearchParams();
+    if (anioId) params.append('anio_id', anioId);
+    if (semana) params.append('semana', semana);
+    if (grupoId) params.append('grupo_id', grupoId);
+    if (profesorId) params.append('profesor_id', profesorId);
+    
+    const newURL = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newURL);
+}
+
+// Manejar cambio de filtros
+document.getElementById('filtro-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    actualizarURL();
+    calendar.refetchEvents();
+});
+
+// Manejar botón guardar en modal
+document.getElementById('btn-guardar-asignacion').addEventListener('click', function() {
+    const asignacionId = document.getElementById('edit-asignacion-id').value;
+    const franjaId = document.getElementById('edit-franja').value;
+    const localId = document.getElementById('edit-local').value;
+    const profesorId = document.getElementById('edit-profesor').value;
+    
+    const datos = {};
+    if (franjaId) datos.franja_id = parseInt(franjaId);
+    if (localId) datos.local_id = parseInt(localId);
+    if (profesorId) datos.profesor_id = profesorId ? parseInt(profesorId) : null;
+    
+    modificarAsignacion(asignacionId, datos)
+        .then(response => {
+            if (response.success) {
+                mostrarToast('Asignación actualizada correctamente', 'success');
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modal-editar-asignacion'));
+                modal.hide();
+                calendar.refetchEvents();
+            } else {
+                // Mostrar errores
+                limpiarErrores();
+                
+                if (response.errors.franja) {
+                    document.getElementById('error-franja').textContent = response.errors.franja.join(', ');
+                    document.getElementById('error-franja').style.display = 'block';
+                }
+                if (response.errors.local) {
+                    document.getElementById('error-local').textContent = response.errors.local.join(', ');
+                    document.getElementById('error-local').style.display = 'block';
+                }
+                if (response.errors.profesor) {
+                    document.getElementById('error-profesor').textContent = response.errors.profesor.join(', ');
+                    document.getElementById('error-profesor').style.display = 'block';
+                }
+                if (response.errors.__all__) {
+                    document.getElementById('error-global').textContent = response.errors.__all__.join(', ');
+                    document.getElementById('error-global').style.display = 'block';
+                }
+            }
+        })
+        .catch(error => {
+            mostrarToast('Error al modificar asignación', 'error');
+        });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Eliminar Profesor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Confirmar Eliminación</h4>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    ¿Está seguro que desea eliminar al profesor <strong>{{ profesor.nombre }}</strong>?
+                </p>
+                <p class="text-muted">
+                    Esta acción no se puede deshacer. Si el profesor tiene asignaciones a asignaturas,
+                    estas serán eliminadas también.
+                </p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'academico:profesor_list' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

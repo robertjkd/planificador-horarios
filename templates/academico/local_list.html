@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Locales{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Locales</h2>
+    <a href="{% url 'academico:local_create' %}" class="btn btn-primary">Nuevo Local</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Tipo</th>
+                        <th>Capacidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for local in locales %}
+                    <tr>
+                        <td>{{ local.codigo }}</td>
+                        <td>{{ local.nombre }}</td>
+                        <td>{{ local.get_tipo_display }}</td>
+                        <td>{{ local.capacidad }}</td>
+                        <td>
+                            <a href="{% url 'academico:local_update' local.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No hay locales registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

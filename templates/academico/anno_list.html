@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}Años Académicos{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Años Académicos</h2>
+    <a href="{% url 'academico:anno_create' %}" class="btn btn-primary">Nuevo Año</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Turno</th>
+                        <th>Número</th>
+                        <th>Grupos</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for anno in annos %}
+                    <tr>
+                        <td>{{ anno.nombre }}</td>
+                        <td>{{ anno.get_turno_display }}</td>
+                        <td>{{ anno.numero }}</td>
+                        <td>{{ anno.grupos.count }}</td>
+                        <td>
+                            <a href="{% url 'academico:anno_update' anno.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No hay años académicos registrados</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

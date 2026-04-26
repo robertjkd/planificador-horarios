@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}Generar Horario{% endblock %}
+
+{% block content %}
+<h3>Generar Horario Automáticamente</h3>
+
+<div class="card">
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label class="form-label">Año Académico</label>
+                <select name="anio" class="form-select" required>
+                    <option value="">— Seleccionar —</option>
+                    {% for a in annos %}
+                    <option value="{{ a.pk }}">{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Semana</label>
+                <select name="semana" class="form-select" required>
+                    <option value="">— Seleccionar —</option>
+                    {% for s in semanas %}
+                    <option value="{{ s }}">Semana {{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Generar Horario</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

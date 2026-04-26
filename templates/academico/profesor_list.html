@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Profesores{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Gestión de Profesores</h2>
+    <a href="{% url 'academico:profesor_create' %}" class="btn btn-primary">Nuevo Profesor</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Usuario Sistema</th>
+                        <th>Asignaciones</th>
+                        <th class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for profesor in profesores %}
+                    <tr>
+                        <td>{{ profesor.nombre }}</td>
+                        <td>
+                            {% if profesor.usuario %}
+                                <span class="badge bg-info">{{ profesor.usuario.username }}</span>
+                            {% else %}
+                                <span class="text-muted">-</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ profesor.asignaciones.count }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'academico:profesor_update' profesor.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                            <a href="{% url 'academico:profesor_delete' profesor.pk %}" class="btn btn-sm btn-outline-danger">Eliminar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            No hay profesores registrados
+                            <br>
+                            <a href="{% url 'academico:profesor_create' %}" class="btn btn-sm btn-primary mt-2">Agregar profesor</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Eliminar Asignación de Profesor{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-warning">
+            <div class="card-header bg-warning">
+                <h4 class="mb-0">Confirmar Eliminación</h4>
+            </div>
+            <div class="card-body">
+                <p class="card-text">¿Está seguro que desea eliminar la asignación de <strong>{{ asignacion.profesor.nombre }}</strong> a <strong>{{ asignacion.asignatura.nombre }}</strong>?</p>
+                <p class="text-muted">Esta acción no se puede deshacer.</p>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'academico:asignatura_list' %}" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-warning">Eliminar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

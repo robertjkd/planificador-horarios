@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% load horario_filters %}
+
+{% block title %}Horario - Semana {{ semana }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .horario-container {
+        margin: 20px 0;
+    }
+    
+    .horario-table {
+        margin-bottom: 30px;
+        border-collapse: collapse;
+        width: 100%;
+    }
+    
+    .horario-table th {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 12px;
+        text-align: center;
+        font-weight: 600;
+    }
+    
+    .horario-table td {
+        border: 1px solid #dee2e6;
+        padding: 8px;
+        text-align: center;
+        vertical-align: middle;
+        min-width: 100px;
+    }
+    
+    .hora-cell {
+        background-color: #e9ecef;
+        font-weight: 500;
+        white-space: nowrap;
+    }
+    
+    .celda-actividad {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .celda-actividad:hover {
+        opacity: 0.8;
+    }
+    
+    .celda-editable {
+        cursor: pointer;
+        position: relative;
+    }
+    
+    .celda-editable:hover::after {
+        content: '✎';
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        font-size: 12px;
+        color: #666;
+    }
+    
+    /* Colores por tipo de actividad */
+    .tipo-C { background-color: #e3f2fd; }  /* Conferencia - Azul claro */
+    .tipo-CE { background-color: #bbdefb; }  /* Conferencia especial - Azul */
+    .tipo-CP { background-color: #c8e6c9; }  /* Clase práctica - Verde claro */
+    .tipo-L { background-color: #c5e1a5; }  /* Laboratorio - Verde */
+    .tipo-S { background-color: #fff9c4; }  /* Seminario - Amarillo claro */
+    .tipo-T { background-color: #ffe0b2; }  /* Taller - Naranja claro */
+    .tipo-TE { background-color: #ffcc80; }  /* Taller especial - Naranja */
+    .tipo-PP { background-color: #f5f5f5; }  /* Práctica profesional - Gris claro */
+    .tipo-E { background-color: #f8bbd0; }  /* Educación física - Rosa */
+    .tipo-NP { background-color: #e0e0e0; }  /* No presencial - Gris */
+    
+    .dia-titulo {
+        background-color: #343a40;
+        color: white;
+        padding: 10px;
+        margin: 20px 0 10px 0;
+        border-radius: 4px;
+        font-size: 1.2em;
+        font-weight: 600;
+    }
+    
+    .filtros-panel {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .filtro-row {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: end;
+    }
+    
+    .filtro-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filtro-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+    }
+    
+    .filtro-group select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+    
+    .btn-filtrar {
+        background-color: #0d6efd;
+        color: white;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+    
+    .btn-filtrar:hover {
+        background-color: #0b5ed7;
+    }
+    
+    .btn-exportar {
+        background-color: #198754;
+        color: white;
+        padding: 8px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-exportar:hover {
+        background-color: #157347;
+    }
+    
+    .sin-datos {
+        text-align: center;
+        padding: 40px;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container horario-container">
+    <h2 class="mb-4">Horario Académico</h2>
+    
+    <!-- Panel de filtros -->
+    <div class="filtros-panel">
+        <form method="GET" class="filtro-row">
+            <div class="filtro-group">
+                <label for="anio_id">Año Académico</label>
+                <select id="anio_id" name="anio_id" required>
+                    <option value="">Seleccione...</option>
+                    {% for a in annos %}
+                    <option value="{{ a.pk }}" {% if a.pk == anio.pk %}selected{% endif %}>
+                        {{ a.nombre }} ({{ a.get_turno_display }})
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filtro-group">
+                <label for="semana">Semana</label>
+                <select id="semana" name="semana" required>
+                    <option value="">Seleccione...</option>
+                    {% for s in semanas %}
+                    <option value="{{ s }}" {% if s == semana %}selected{% endif %}>
+                        Semana {{ s }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            {% if request.user.es_planificador or request.user.es_vicedecano %}
+            <div class="filtro-group">
+                <label for="grupo_id">Grupo (opcional)</label>
+                <select id="grupo_id" name="grupo_id">
+                    <option value="">Todos los grupos</option>
+                    {% for g in anio.grupos.all %}
+                    <option value="{{ g.pk }}" {% if grupo_seleccionado and g.pk == grupo_seleccionado.pk %}selected{% endif %}>
+                        {{ g.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filtro-group">
+                <label for="profesor_id">Profesor (opcional)</label>
+                <select id="profesor_id" name="profesor_id">
+                    <option value="">Todos los profesores</option>
+                    {% for p in profesores %}
+                    <option value="{{ p.pk }}" {% if p.pk == profesor_id|floatformat:0 %}selected{% endif %}>
+                        {{ p.nombre }} {{ p.apellido }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% endif %}
+            
+            <button type="submit" class="btn-filtrar">Filtrar</button>
+        </form>
+        
+        <div class="mt-3">
+            <div class="btn-group">
+                <a href="{% url 'horario:exportar_horario' %}?anio_id={{ anio.pk }}&semana={{ semana }}&formato=pdf{% if grupo_seleccionado %}&grupo_id={{ grupo_seleccionado.pk }}{% endif %}{ if profesor_id %}&profesor_id={{ profesor_id }}{% endif %}" class="btn btn-exportar">
+                    PDF
+                </a>
+                <a href="{% url 'horario:exportar_horario' %}?anio_id={{ anio.pk }}&semana={{ semana }}&formato=excel{% if grupo_seleccionado %}&grupo_id={{ grupo_seleccionado.pk }}{% endif %}{ if profesor_id %}&profesor_id={{ profesor_id }}{% endif %}" class="btn btn-exportar">
+                    Excel
+                </a>
+                <a href="{% url 'horario:exportar_horario' %}?anio_id={{ anio.pk }}&semana={{ semana }}&formato=csv{% if grupo_seleccionado %}&grupo_id={{ grupo_seleccionado.pk }}{% endif %}{ if profesor_id %}&profesor_id={{ profesor_id }}{% endif %}" class="btn btn-exportar">
+                    CSV
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Título del horario -->
+    <h3 class="mb-3">Semana {{ semana }} - {{ anio.nombre }} ({{ anio.get_turno_display }})</h3>
+    
+    {% if not franjas_por_dia or not franjas_por_dia.values.0 %}
+    <div class="sin-datos">
+        <p>No hay franjas horarias configuradas para este turno o no hay horario generado para esta semana.</p>
+    </div>
+    {% else %}
+    
+    <!-- Tablas por día -->
+    {% for dia in dias %}
+    {% if franjas_por_dia.dia %}
+    <div class="dia-titulo">
+        {{ nombres_dias|get_item:dia }}
+    </div>
+    
+    <table class="horario-table">
+        <thead>
+            <tr>
+                <th>Hora</th>
+                {% for grupo in grupos %}
+                <th>{{ grupo.nombre }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for franja in franjas_por_dia.dia %}
+            <tr>
+                <td class="hora-cell">
+                    {{ franja.hora_inicio|date:"H:i" }}–{{ franja.hora_fin|date:"H:i" }}
+                </td>
+                {% for grupo in grupos %}
+                <td class="celda-actividad">
+                    {% if horario.dia.franja.pk %}
+                    {% with asignacion=horario|get_triple_nested:dia:franja.pk:grupo.pk %}
+                    {% if asignacion %}
+                    <span class="tipo-{{ asignacion.actividad_plan.tipo_actividad }} {% if request.user.es_planificador or request.user.es_vicedecano %}celda-editable{% endif %}"
+                          data-asignacion-id="{{ asignacion.pk }}"
+                          title="Asignatura: {{ asignacion.actividad_plan.asignatura.nombre }}
+Profesor: {{ asignacion.profesor.nombre|default:'Sin asignar' }} {{ asignacion.profesor.apellido|default:'' }}
+Local: {{ asignacion.local.nombre }} ({{ asignacion.local.codigo }})
+Tipo: {{ asignacion.actividad_plan.get_tipo_actividad_display }}
+{% if request.user.es_planificador or request.user.es_vicedecano %}Click para editar{% endif %}">
+                        {{ formatear_celda(asignacion) }}
+                    </span>
+                    {% endif %}
+                    {% endwith %}
+                    {% endif %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endfor %}
+    {% endif %}
+</div>
+
+{% block extra_js %}
+<!-- Modal para editar asignación -->
+<div class="modal fade" id="modal-editar" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" id="modal-editar-content">
+            <!-- Contenido cargado dinámicamente -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // Función para recargar página al cambiar filtros
+    document.querySelectorAll('#anio_id, #semana, #grupo_id, #profesor_id').forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Manejo de celdas editables para Planificadores
+    {% if request.user.es_planificador or request.user.es_vicedecano %}
+    document.querySelectorAll('.celda-editable').forEach(celda => {
+        celda.addEventListener('click', function() {
+            const asignacionId = this.dataset.asignacionId;
+            
+            // Cargar formulario en el modal
+            fetch(`/horario/editar/${asignacionId}/`)
+                .then(response => response.text())
+                .then(html => {
+                    document.getElementById('modal-editar-content').innerHTML = html;
+                    const modal = new bootstrap.Modal(document.getElementById('modal-editar'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Error al cargar el formulario:', error);
+                    alert('Error al cargar el formulario de edición.');
+                });
+        });
+    });
+    {% endif %}
+</script>
+{% endblock %}
+{% endblock %}

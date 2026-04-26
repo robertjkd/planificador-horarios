@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Planificador de Horarios{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .nav-role-badge { font-size: 0.75rem; }
+        .horario-table th, .horario-table td {
+            border: 1px solid #dee2e6;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 0.85rem;
+        }
+        .horario-table .conf-row td {
+            background-color: #fff3cd;
+            font-weight: bold;
+        }
+        .horario-cell { min-height: 40px; padding: 4px; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'usuarios:home' %}">Planificador de Horarios</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    {% if user.is_authenticated %}
+                        {% if user.es_vicedecano %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    Administración
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'usuarios:usuario_list' %}">Usuarios</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'planificacion:importar_balance' %}">Importar Balance</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:panel_auditoria' %}">Panel de Auditoría</a></li>
+                                </ul>
+                            </li>
+                        {% endif %}
+                        
+                        {% if user.es_planificador %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                                    Gestión Académica
+                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><h6 class="dropdown-header">Catálogos Base</h6></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:anno_list' %}">Años Académicos</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:grupo_list' %}">Grupos</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:asignatura_list' %}">Asignaturas</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:profesor_list' %}">Profesores</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:local_list' %}">Locales</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:franjahoraria_list' %}">Franjas Horarias</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><h6 class="dropdown-header">Asignaciones</h6></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:asignacionprofesor_list' %}">Profesor → Asignatura</a></li>
+                                    <li><a class="dropdown-item" href="{% url 'academico:asignacionaulagrupo_list' %}">Aula → Grupo</a></li>
+                                </ul>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'planificacion:seleccionar_generacion' %}">Generar Horario</a>
+                            </li>
+                        {% endif %}
+                        
+                        {% if user.es_consulta %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'horario:ver_horario' %}">Ver Horario</a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+                <ul class="navbar-nav">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <span class="nav-link text-light">
+                                {{ user.get_full_name|default:user.username }}
+                                <span class="badge bg-info nav-role-badge">{{ user.get_rol_display }}</span>
+                            </span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'usuarios:logout' %}">Salir</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'usuarios:login' %}">Iniciar sesión</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="alert alert-{{ msg.tags }} alert-dismissible fade show">
+                    {{ msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

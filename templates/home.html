@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - Planificador de Horarios{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <h2 class="mb-4">Sistema de Planificación de Horarios Académicos</h2>
+
+        {% if user.es_vicedecano %}
+        <div class="card mb-3">
+            <div class="card-header bg-danger text-white">Vicedecano</div>
+            <div class="card-body">
+                <a href="{% url 'usuarios:usuario_list' %}" class="btn btn-outline-primary me-2">Gestionar Usuarios</a>
+                <a href="{% url 'planificacion:importar_balance' %}" class="btn btn-outline-success">Importar Balance</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if user.es_planificador %}
+        <div class="card mb-3">
+            <div class="card-header bg-primary text-white">Planificador - Gestión Académica</div>
+            <div class="card-body">
+                <h6 class="text-muted mb-2">Catálogos Base</h6>
+                <div class="mb-3">
+                    <a href="{% url 'academico:anno_list' %}" class="btn btn-outline-primary btn-sm me-1">Años</a>
+                    <a href="{% url 'academico:grupo_list' %}" class="btn btn-outline-primary btn-sm me-1">Grupos</a>
+                    <a href="{% url 'academico:asignatura_list' %}" class="btn btn-outline-primary btn-sm me-1">Asignaturas</a>
+                    <a href="{% url 'academico:profesor_list' %}" class="btn btn-outline-primary btn-sm me-1">Profesores</a>
+                    <a href="{% url 'academico:local_list' %}" class="btn btn-outline-primary btn-sm me-1">Locales</a>
+                    <a href="{% url 'academico:franjahoraria_list' %}" class="btn btn-outline-primary btn-sm me-1">Franjas</a>
+                </div>
+                
+                <h6 class="text-muted mb-2">Asignaciones</h6>
+                <div class="mb-3">
+                    <a href="{% url 'academico:asignacionprofesor_list' %}" class="btn btn-outline-info btn-sm me-1">Profesor → Asignatura</a>
+                    <a href="{% url 'academico:asignacionaulagrupo_list' %}" class="btn btn-outline-info btn-sm me-1">Aula → Grupo</a>
+                </div>
+                
+                <hr>
+                <a href="{% url 'planificacion:seleccionar_generacion' %}" class="btn btn-primary">Generar Horario</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="card mb-3">
+            <div class="card-header bg-success text-white">Consulta de Horarios</div>
+            <div class="card-body">
+                <a href="{% url 'horario:ver_horario' %}" class="btn btn-success">Ver Horario</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

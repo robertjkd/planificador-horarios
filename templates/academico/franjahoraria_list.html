@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Franjas Horarias{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Franjas Horarias</h2>
+    <a href="{% url 'academico:franjahoraria_create' %}" class="btn btn-primary">Nueva Franja</a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Día</th>
+                        <th>Hora Inicio</th>
+                        <th>Hora Fin</th>
+                        <th>Turno</th>
+                        <th>Orden</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for franja in franjas %}
+                    <tr>
+                        <td>{{ franja.get_dia_semana_display }}</td>
+                        <td>{{ franja.hora_inicio }}</td>
+                        <td>{{ franja.hora_fin }}</td>
+                        <td>{{ franja.get_turno_display }}</td>
+                        <td>{{ franja.orden }}</td>
+                        <td>
+                            <a href="{% url 'academico:franjahoraria_update' franja.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">No hay franjas horarias registradas</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

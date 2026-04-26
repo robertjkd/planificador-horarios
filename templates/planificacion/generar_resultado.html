@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% load horario_filters %}
+
+{% block title %}Resultado de Generación{% endblock %}
+
+{% block content %}
+<h3>Resultado de Generación de Horario</h3>
+
+<div class="card">
+    <div class="card-body">
+        <h5>{{ anio }} — Semana {{ semana }}</h5>
+        
+        {% if resultado %}
+        <div class="alert {% if resultado.exito %}alert-success{% else %}alert-danger{% endif %}">
+            {{ resultado.mensaje }}
+        </div>
+        
+        {% if resultado.estadisticas %}
+        <div class="mt-3">
+            <h6>Estadísticas</h6>
+            <ul class="list-group">
+                <li class="list-group-item">
+                    <i class="bi bi-clock"></i> Tiempo de ejecución: {{ resultado.estadisticas.tiempo_segundos|floatformat:2 }} segundos
+                </li>
+                {% if resultado.estadisticas.valor_objetivo %}
+                <li class="list-group-item">
+                    <i class="bi bi-bullseye"></i> Valor objetivo: {{ resultado.estadisticas.valor_objetivo|floatformat:2 }}
+                </li>
+                {% endif %}
+                <li class="list-group-item">
+                    <i class="bi bi-check-circle"></i> Actividades asignadas: {{ resultado.estadisticas.actividades_asignadas }}
+                </li>
+                {% if resultado.estadisticas.asignaciones_virtuales > 0 %}
+                <li class="list-group-item list-group-item-warning">
+                    <i class="bi bi-exclamation-triangle"></i> 
+                    <strong>⚠️ {{ resultado.estadisticas.asignaciones_virtuales }} actividades en locales virtuales</strong>
+                    <br><small class="text-muted">Requieren asignación manual de local y franja</small>
+                </li>
+                {% endif %}
+                {% if resultado.estadisticas.es_solucion_relajada %}
+                <li class="list-group-item list-group-item-warning">
+                    <i class="bi bi-exclamation-circle"></i>
+                    <strong>Solución relajada</strong> - Se ignoraron restricciones blandas
+                </li>
+                {% endif %}
+                {% if resultado.estadisticas.es_solucion_emergencia %}
+                <li class="list-group-item list-group-item-danger">
+                    <i class="bi bi-exclamation-octagon"></i>
+                    <strong>🆘 Solución de emergencia</strong> - No se encontró solución automática
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+        {% endif %}
+        {% endif %}
+        
+        {% if tabla_horario and tabla_horario.filas %}
+        <div class="mt-4">
+            <h5>Horario Generado</h5>
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="min-width: 120px;">Franja</th>
+                            {% for dia_num, dia_nombre in dias_semana %}
+                            <th style="min-width: 150px;">{{ dia_nombre }}</th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for fila in tabla_horario.filas %}
+                        <tr>
+                            <td class="table-secondary">
+                                <strong>{{ fila.franja_nombre }}</strong><br>
+                                <small class="text-muted">{{ fila.hora_inicio }} - {{ fila.hora_fin }}</small>
+                            </td>
+                            {% for dia_num, dia_nombre in dias_semana %}
+                            <td style="vertical-align: top; padding: 4px;">
+                                {% for celda in fila.celdas|get_item:dia_num %}
+                                <div class="card mb-1 {% if celda.es_virtual %}border-warning bg-warning bg-opacity-10{% endif %}{% if celda.es_conflicto %}border-danger bg-danger bg-opacity-10{% endif %}{% if not celda.grupo %}border-info bg-info bg-opacity-10{% endif %}">
+                                    <div class="card-body p-2" style="font-size: 0.85rem;">
+                                        <div class="fw-bold">{{ celda.asignatura|truncatechars:20 }}</div>
+                                        <div class="text-muted">
+                                            {{ celda.tipo_actividad }}
+                                            {% if celda.grupo %}- {{ celda.grupo }}{% else %}(Conf){% endif %}
+                                        </div>
+                                        {% if celda.local %}
+                                        <div><small class="text-success">📍 {{ celda.local }}</small></div>
+                                        {% else %}
+                                        <div><small class="text-warning">⚠️ Sin local</small></div>
+                                        {% endif %}
+                                        {% if celda.es_virtual %}
+                                        <div class="badge bg-warning text-dark mt-1">VIRTUAL</div>
+                                        {% endif %}
+                                        {% if celda.es_conflicto %}
+                                        <div class="badge bg-danger mt-1">CONFLICTO</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% empty %}
+                                <span class="text-muted">—</span>
+                                {% endfor %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-2">
+                <span class="badge bg-secondary">Sin asignar</span>
+                <span class="badge bg-info bg-opacity-50 text-dark">Conferencia</span>
+                <span class="badge bg-warning text-dark">Virtual (pendiente)</span>
+                <span class="badge bg-danger">Conflicto</span>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if tabla_horario.pendientes %}
+        <div class="mt-4">
+            <h5 class="text-danger">🆘 Actividades Pendientes de Asignación Manual ({{ tabla_horario.pendientes|length }})</h5>
+            <div class="alert alert-danger">
+                <p>Las siguientes actividades no pudieron asignarse automáticamente a una franja horaria. Debe asignarles local y franja manualmente:</p>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Asignatura</th>
+                            <th>Grupo</th>
+                            <th>Tipo</th>
+                            <th>Profesor</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for celda in tabla_horario.pendientes %}
+                        <tr class="table-warning">
+                            <td>{{ celda.asignatura }}</td>
+                            <td>{{ celda.grupo|default:"Conferencia" }}</td>
+                            <td>{{ celda.tipo_actividad }}</td>
+                            <td>{{ celda.profesor }}</td>
+                            <td><span class="badge bg-warning text-dark">PENDIENTE</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if resultado.estadisticas.actividades_pendientes %}
+        <div class="mt-4">
+            <h5 class="text-danger">🆘 Actividades Pendientes de Asignación Manual</h5>
+            <div class="alert alert-danger">
+                <p>Las siguientes actividades no pudieron asignarse automáticamente. Debe asignarles local y franja manualmente:</p>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Asignatura</th>
+                            <th>Grupo</th>
+                            <th>Día</th>
+                            <th>Tipo</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for act in resultado.estadisticas.actividades_pendientes %}
+                        <tr>
+                            <td>{{ act.asignatura__nombre }}</td>
+                            <td>{{ act.grupo__nombre|default:"Conferencia" }}</td>
+                            <td>
+                                {% if act.dia_semana == 0 %}Lunes
+                                {% elif act.dia_semana == 1 %}Martes
+                                {% elif act.dia_semana == 2 %}Miércoles
+                                {% elif act.dia_semana == 3 %}Jueves
+                                {% elif act.dia_semana == 4 %}Viernes
+                                {% endif %}
+                            </td>
+                            <td>{{ act.tipo_actividad }}</td>
+                            <td>
+                                <span class="badge bg-warning text-dark">Pendiente</span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="mt-4">
+            <a href="{% url 'planificacion:seleccionar_generacion' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Volver
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

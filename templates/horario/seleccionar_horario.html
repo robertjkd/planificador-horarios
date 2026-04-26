@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Seleccionar Horario{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Consultar Horario Académico</h2>
+    
+    <div class="card">
+        <div class="card-body">
+            <form method="GET">
+                <div class="mb-3">
+                    <label for="anio_id" class="form-label">Año Académico</label>
+                    <select id="anio_id" name="anio_id" class="form-select" required>
+                        <option value="">Seleccione...</option>
+                        {% for a in annos %}
+                        <option value="{{ a.pk }}">
+                            {{ a.nombre }} ({{ a.get_turno_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="semana" class="form-label">Semana</label>
+                    <select id="semana" name="semana" class="form-select" required>
+                        <option value="">Seleccione...</option>
+                        {% for s in semanas %}
+                        <option value="{{ s }}">Semana {{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Consultar Horario</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

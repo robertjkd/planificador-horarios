@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1cm;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .titulo {
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        
+        .subtitulo {
+            text-align: center;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .dia-titulo {
+            background-color: #333;
+            color: white;
+            padding: 8px;
+            margin: 15px 0 10px 0;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        th {
+            background-color: #ddd;
+            border: 1px solid #333;
+            padding: 6px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 10px;
+        }
+        
+        td {
+            border: 1px solid #333;
+            padding: 4px;
+            text-align: center;
+            font-size: 9px;
+        }
+        
+        .hora-cell {
+            background-color: #eee;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .celda-vacia {
+            background-color: #fff;
+        }
+        
+        .celda-actividad {
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <div class="titulo">Horario Académico</div>
+    <div class="subtitulo">
+        Semana {{ datos.semana }} - {{ datos.anio.nombre }} ({{ datos.anio.get_turno_display }})
+        {% if datos.grupo_seleccionado %}
+            - Grupo: {{ datos.grupo_seleccionado.nombre }}
+        {% endif %}
+    </div>
+    
+    {% for dia in datos.dias %}
+    {% if datos.franjas_por_dia.dia %}
+    <div class="dia-titulo">{{ datos.nombres_dias.dia }}</div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 80px;">Hora</th>
+                {% for grupo in datos.grupos %}
+                <th>{{ grupo.nombre }}</th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for franja in datos.franjas_por_dia.dia %}
+            <tr>
+                <td class="hora-cell">
+                    {{ franja.hora_inicio|date:"H:i" }}–{{ franja.hora_fin|date:"H:i" }}
+                </td>
+                {% for grupo in datos.grupos %}
+                <td class="{% if datos.horario.dia.franja.pk.grupo.pk %}celda-actividad{% else %}celda-vacia{% endif %}">
+                    {% with asignacion=datos.horario.dia.franja.pk.grupo.pk %}
+                    {% if asignacion %}
+                        {{ formatear_celda(asignacion) }}
+                    {% endif %}
+                    {% endwith %}
+                </td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+    {% endfor %}
+    
+    <div style="text-align: center; margin-top: 30px; font-size: 8px; color: #666;">
+        Generado automáticamente por el Sistema de Planificación de Horarios
+    </div>
+</body>
+</html>
