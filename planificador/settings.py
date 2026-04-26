@@ -4,6 +4,7 @@ Django settings for planificador project.
 import os
 from pathlib import Path
 import environ
+import dj_database_url
 
 # Inicializar django-environ
 env = environ.Env(
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Whitenoise para servir estáticos en producción
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -73,29 +75,42 @@ TEMPLATES = [
 WSGI_APPLICATION = 'planificador.wsgi.application'
 
 # ─────────────────────────────────────────────────────────────
-# CONFIGURACIÓN DINÁMICA DE BASE DE DATOS
+# CONFIGURACIÓN DE BASE DE DATOS
 # ─────────────────────────────────────────────────────────────
-DB_ENGINE = env('DB_ENGINE')  # 'sqlite' o 'postgresql'
-
-if DB_ENGINE == 'postgresql':
+# Para producción en Render: usa DATABASE_URL si está disponible
+# Para desarrollo local: usa la configuración de variables individuales
+if os.environ.get('DATABASE_URL'):
+    # Producción: usar PostgreSQL via DATABASE_URL de Render
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': env('DB_NAME'),
-            'USER': env('DB_USER'),
-            'PASSWORD': env('DB_PASSWORD'),
-            'HOST': env('DB_HOST'),
-            'PORT': env('DB_PORT'),
-        }
+        'default': dj_database_url.config(
+            default=os.environ.get('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=True  # Render PostgreSQL requiere SSL
+        )
     }
 else:
-    # SQLite como fallback para desarrollo
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / env('DB_NAME'),
+    # Desarrollo local: usar configuración tradicional
+    DB_ENGINE = env('DB_ENGINE', default='sqlite')  # 'sqlite' o 'postgresql'
+    
+    if DB_ENGINE == 'postgresql':
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': env('DB_NAME'),
+                'USER': env('DB_USER'),
+                'PASSWORD': env('DB_PASSWORD'),
+                'HOST': env('DB_HOST'),
+                'PORT': env('DB_PORT'),
+            }
         }
-    }
+    else:
+        # SQLite como fallback para desarrollo
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / env('DB_NAME', default='db.sqlite3'),
+            }
+        }
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -128,9 +143,12 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
+# Whitenoise para servir archivos estáticos en producción
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -249,3 +267,25 @@ PASSWORD_GENERICO_SUFFIX = '123456'  # Sufijo para password genérico
 # Validación de nombres de usuario
 USERNAME_MAX_LENGTH = 150
 USERNAME_REGEX = r'^[\w.@+-]+$'  # Letras, dígitos, @, ., +, -, _
+
+# ─────────────────────────────────────────────────────────────
+# CONFIGURACIÓN DE SEGURIDAD PARA PRODUCCIÓN
+# ─────────────────────────────────────────────────────────────
+# Estas configuraciones solo se activan cuando DEBUG=False
+if not DEBUG:
+    # Cookies seguras (solo HTTPS)
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
+    
+    # Redirección HTTPS
+    SECURE_SSL_REDIRECT = True
+    
+    # HTTP Strict Transport Security (HSTS)
+    SECURE_HSTS_SECONDS = 31536000  # 1 año
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    
+    # Configuraciones adicionales de seguridad
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
